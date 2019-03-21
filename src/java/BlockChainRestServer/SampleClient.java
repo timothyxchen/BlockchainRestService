@@ -1,18 +1,22 @@
-package BlockchainRestServer;
+package BlockChainRestServer;
 
 import java.util.Scanner;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.math.BigInteger;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Random;
+import project2task5.CreateKey;
+import project2task5.SignID;
 
 /**
  *
  * @author chentianxin
- * The Project3Task3Client program is the client side, where it will print out
+ * The SampleClient program is the client side, where it will print out
  * the menu with listed choices, and takes user input of the choice. The
  * program follows the single argument design where there is only one method
  * provided on the service side.
@@ -31,55 +35,91 @@ class Result{
     }
 }
 
-public class Project3Task3Client {
+public class SampleClient {
+    private static BigInteger n; // n is the modulus for both the private and public keys
+    private static BigInteger d; // d is the exponent of the private key
+    private static String[][] keySet; //store the public keys and private keys
+    private static final int seed = 10000000; //random uplimit for the seed generation
+    private static String signature; // store the signature of the message
+    private static String user_id; // store the signature of the message
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        OUTER:
-        while (true) {
-            System.out.println("Block Chain Menu");
-            System.out.println("1. Add a transaction to the blockchain");
-            System.out.println("2. Verify the blockchain.");
-            System.out.println("3. View the blockchain.");
-            System.out.println("4. Exit.");
+        CreateKey ck = new CreateKey();
+        SignID si = new SignID();
+        Scanner sc = new Scanner(System.in);
+        
+        try{
+            //random a number and set the seed in the ck class to ensure the client
+            //each time entered has different keys(ids)
+            Random r = new Random();
+            ck.set_seed(r.nextInt(seed));
             
-            //read in the user choice
-            Scanner sc = new Scanner(System.in);
-            String user_choice = sc.nextLine();
-            switch (user_choice) {
+            //generate public keys and private keys, and get the public key pairs
+            keySet = ck.createKey();
+            n=ck.get_n();
+            d=ck.get_d();
+            OUTER:
+            while (true) {
+                System.out.println("Block Chain Menu");
+                System.out.println("1. Add a transaction to the blockchain");
+                System.out.println("2. Verify the blockchain.");
+                System.out.println("3. View the blockchain.");
+                System.out.println("4. Exit.");
                 
-                //if user choice is 1, takes input of difficulty and transaction,
-                //and call the addBlockChain with the string containing CSV message
-                case "1":
-                    System.out.println("Enter difficulty > 0");
-                    String difficulty = sc.nextLine();
-                    System.out.println("Enter transaction");
-                    String transaction = sc.nextLine();
-                    System.out.println(addBlockChain(user_choice+","+difficulty+","+transaction));
-                    break;
+                //read in the user choice
+                String user_choice = sc.nextLine();
+                switch (user_choice) {
                     
-                    //if user choice is 2 or 3, directly call the functions  
-                case "2":
-                case "3":
-                    System.out.println(opeBlockChain(user_choice));
-                    break;
                     
-                    //if user choice is 4, break the loop
-                case "4":
-                    break OUTER;
-                    
-                    //if user choice is something else, print the message, and continue the program
-                default:
-                    System.out.println("Something went wrong");
-                    continue;
+                    //if user choice is 1, takes input of difficulty and transaction,
+                    //and call the addBlockChain with the string containing CSV message
+                    case "1":
+                        System.out.println("Enter difficulty > 0");
+                        String difficulty = sc.nextLine();
+                        System.out.println("Enter transaction");
+                        String transaction = sc.nextLine();
+                        //concatenate the public keys
+                        
+                        String pkey_hashed = keySet[0][0]+keySet[0][1];
+                        
+                        //hash the concatenated string and use the last 20 bytes as the string
+                        user_id = HashKey.ComputeSHA_256_as_Hex_String(pkey_hashed);
+                        String user_combination = user_choice+","+difficulty+","+transaction+","+
+                                user_id+","+keySet[0][0]+","+keySet[0][1];
+                        //set the d and n and encrpt the information
+                        si.set_d(d);
+                        si.set_n(n);
+                        signature = si.sign(user_combination);
+                        user_combination += signature;
+                        System.out.println(addBlockChain(user_combination));
+                        break;
+                        
+                        //if user choice is 2 or 3, directly call the functions
+                    case "2":
+                    case "3":
+                        System.out.println(opeBlockChain(user_choice));
+                        break;
+                        
+                        //if user choice is 4, break the loop
+                    case "4":
+                        break OUTER;
+                        
+                        //if user choice is something else, print the message, and continue the program
+                    default:
+                        System.out.println("Something went wrong");
+                        continue;
+                }
+                System.out.println("-----------------------------");
             }
-            System.out.println("-----------------------------");
+        }catch(Exception e){
+            e.printStackTrace();
         }
     }
     
     /**
-     * 
+     *
      * @param user_choice Takes user choice of the function to be performed
      * @return the String output of either viewing the block chain or verifying the block chain.
      */
@@ -93,7 +133,7 @@ public class Project3Task3Client {
     }
     
     /**
-     * 
+     *
      * @param user_inputs Takes combined user input of the difficulty and transaction information
      * @return the string output of the time taken to add a block
      */

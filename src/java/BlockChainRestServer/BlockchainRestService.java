@@ -12,6 +12,9 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.net.*;
+import java.io.*;
+import java.math.BigInteger;
 
 
 /**
@@ -25,7 +28,11 @@ import javax.servlet.http.HttpServletResponse;
 public class BlockchainRestService extends HttpServlet {
     //initialize the blockchain
     BlockChain bc = new BlockChain();
-     
+    static BigInteger e,n; //passed from the client side
+    
+    //initialize the verify class
+    Verify verifier = new Verify();
+    
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -78,6 +85,13 @@ public class BlockchainRestService extends HttpServlet {
         // Read what the client has placed in the PUT data area
         BufferedReader br = new BufferedReader(new InputStreamReader(request.getInputStream()));
         String data = br.readLine();
+
+        e = new BigInteger(data.split(";")[4]);
+        n = new BigInteger(data.split(";")[5]);
+        
+        //set the numbers to the verifiers to make check
+        verifier.set_e(e);
+        verifier.set_n(n);
         if(!data.split(",")[0].equals("1")){
             response.setStatus(401);
             return;
